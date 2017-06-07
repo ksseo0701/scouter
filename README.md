@@ -1,10 +1,10 @@
 ![scouter](./scouter.document/img/main/scouter-logo-w200.png)
 
-![Englsh](https://img.shields.io/badge/language-English-red.svg) [![Korean](https://img.shields.io/badge/language-Korean-blue.svg)](README_kr.md)
+![Englsh](https://img.shields.io/badge/language-English-orange.svg) [![Korean](https://img.shields.io/badge/language-Korean-blue.svg)](README_kr.md)
 
 ## Application Performance Monitoring for Open Source S/Ws.
 
-SCOUTER is an open source APM line new relic and appdynamics.
+SCOUTER is an open source APM like new relic and appdynamics.
 (APM means application performance monitoring or application performance management.)
 
  - Monitoring target (currently)
@@ -28,8 +28,6 @@ SCOUTER can help you.
 
 ## At a glance(Click to watch the video)
 [![Demo gif](https://j.gifs.com/yDqbAa.gif)](https://youtu.be/iuArTzsD7Ws)
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/iuArTzsD7Ws" frameborder="0" allowfullscreen></iframe>
 
 ## Documents
  - [Document Home](./scouter.document/index.md)
@@ -71,7 +69,7 @@ Scouter has three modules:
  - [Scouter APM : Facebook Scouter user group](https://www.facebook.com/groups/scouterapm/)
 
 ## How to contribute
- - **Notice** : Pull request to **dev branch** only allowed.
+ - **Notice** : Pull request to **develop branch** only allowed.
  - Refer to the development guide below.
    - [Scouter developer guide](./scouter.document/tech/Developer-Guide.md)
  - Please note that you will have to complete a [CLA](http://goo.gl/forms/xSmYs8qM9J) for your first pull-request.

@@ -244,6 +244,11 @@ public class ProfileTextFull {
 			}
 			
 			StepSingle stepSingle = (StepSingle) profiles[i].step;
+
+			if (stepSingle.getStepType() == StepEnum.THREAD_CALL_POSSIBLE) {
+				if(((ThreadCallPossibleStep)stepSingle).threaded == 0) continue;
+			}
+
 			tm = profiles[i].time;
 			cpu = profiles[i].cpu;
 
@@ -270,14 +275,14 @@ public class ProfileTextFull {
 			switch (stepSingle.getStepType()) {
 			case StepEnum.METHOD:
 				slen = sb.length();
-				ProfileText.toString(sb, (MethodStep) stepSingle);
+				ProfileText.toString(sb, (MethodStep) stepSingle, false);
 				if(searchLineIndex == stepSingle.index){
 					sr.add(ProfileText.style(slen, sb.length() - slen, red, SWT.BOLD, yellow));
 				}
 				break;
 			case StepEnum.METHOD2:
 				slen = sb.length();
-				ProfileText.toString(sb, (MethodStep) stepSingle);
+				ProfileText.toString(sb, (MethodStep) stepSingle, false);
 				if(searchLineIndex == stepSingle.index){
 					sr.add(ProfileText.style(slen, sb.length() - slen, red, SWT.BOLD, yellow));
 				}
@@ -323,7 +328,18 @@ public class ProfileTextFull {
 					sr.add(ProfileText.style(slen, sb.length() - slen, dgreen, SWT.NORMAL));
 				}
 				break;
+			case StepEnum.PARAMETERIZED_MESSAGE:
+				slen = sb.length();
+				ParameterizedMessageStep pmStep = (ParameterizedMessageStep) stepSingle;
+				ProfileText.toString(sb, pmStep);
+				if(searchLineIndex == stepSingle.index) {
+					sr.add(ProfileText.style(slen, sb.length() - slen, red, SWT.BOLD, yellow));
+				} else {
+					sr.add(ProfileText.style(slen, sb.length() - slen, ProfileText.getColor(pmStep.getLevel()), SWT.NORMAL));
+				}
+				break;
 			case StepEnum.APICALL:
+			case StepEnum.APICALL2:
 				ApiCallStep apicall = (ApiCallStep) stepSingle;
 				slen = sb.length();
 				ProfileText.toString(sb, apicall);
@@ -336,6 +352,31 @@ public class ProfileTextFull {
 					slen = sb.length();
 					sb.append("\n").append(TextProxy.error.getText(apicall.error));
 					sr.add(ProfileText.style(slen, sb.length() - slen, red, SWT.NORMAL));
+				}
+				break;
+			case StepEnum.DISPATCH:
+				DispatchStep step = (DispatchStep) stepSingle;
+				slen = sb.length();
+				ProfileText.toString(sb, step);
+				if(searchLineIndex == stepSingle.index){
+					sr.add(ProfileText.style(slen, sb.length() - slen, red, SWT.BOLD, yellow));
+				}else{
+					sr.add(ProfileText.style(slen, sb.length() - slen, dmagenta, SWT.NORMAL));
+				}
+				if (step.error != 0) {
+					slen = sb.length();
+					sb.append("\n").append(TextProxy.error.getText(step.error));
+					sr.add(ProfileText.style(slen, sb.length() - slen, red, SWT.NORMAL));
+				}
+				break;
+			case StepEnum.THREAD_CALL_POSSIBLE:
+				ThreadCallPossibleStep tcStep = (ThreadCallPossibleStep) stepSingle;
+				slen = sb.length();
+				ProfileText.toString(sb, tcStep);
+				if(searchLineIndex == stepSingle.index){
+					sr.add(ProfileText.style(slen, sb.length() - slen, red, SWT.BOLD, yellow));
+				}else{
+					sr.add(ProfileText.style(slen, sb.length() - slen, dmagenta, SWT.NORMAL));
 				}
 				break;
 			case StepEnum.SOCKET:

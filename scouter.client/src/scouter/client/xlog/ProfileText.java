@@ -23,12 +23,15 @@ import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.graphics.Color;
 import scouter.client.model.TextProxy;
 import scouter.client.model.XLogData;
+import scouter.client.model.XLogProxy;
 import scouter.client.server.GroupPolicyConstants;
 import scouter.client.server.Server;
 import scouter.client.server.ServerManager;
+import scouter.client.util.ColorUtil;
 import scouter.client.util.SqlMakerUtil;
 import scouter.client.xlog.views.XLogProfileView;
 import scouter.lang.CountryCode;
+import scouter.lang.enumeration.ParameterizedMessageLevel;
 import scouter.lang.step.*;
 import scouter.util.*;
 
@@ -44,9 +47,30 @@ public class ProfileText {
              int serverId) {
 		 build(date, text, xperf, profiles, serverId, false);
 	}
-	 
+
     public static void build(final String date, StyledText text, XLogData xperf, Step[] profiles,
                              int serverId, boolean bindSqlParam) {
+        build(date, text, xperf, profiles, serverId, bindSqlParam, false);
+    }
+
+    public static Color getColor(ParameterizedMessageLevel level) {
+        switch (level) {
+            case DEBUG:
+                return ColorUtil.getInstance().getColor("gray2");
+            case INFO:
+                return ColorUtil.getInstance().getColor("gray3");
+            case WARN:
+                return ColorUtil.getInstance().getColor("dark orange");
+            case ERROR:
+                return ColorUtil.getInstance().getColor("light red2");
+            case FATAL:
+                return ColorUtil.getInstance().getColor("red");
+        }
+        return ColorUtil.getInstance().getColor("dark gray");
+    };
+
+    public static void build(final String date, StyledText text, XLogData xperf, Step[] profiles,
+                             int serverId, boolean bindSqlParam, boolean isSimplified) {
 
         boolean truncated = false;
 
@@ -57,12 +81,18 @@ public class ProfileText {
         XLogUtil.loadStepText(serverId, date, profiles);
 
         String error = TextProxy.error.getLoadText(date, xperf.p.error, serverId);
+
         Color blue = text.getDisplay().getSystemColor(SWT.COLOR_BLUE);
         Color dmagenta = text.getDisplay().getSystemColor(SWT.COLOR_DARK_MAGENTA);
         Color red = text.getDisplay().getSystemColor(SWT.COLOR_RED);
 
         Color dred = text.getDisplay().getSystemColor(SWT.COLOR_DARK_RED);
         Color dgreen = text.getDisplay().getSystemColor(SWT.COLOR_DARK_GREEN);
+
+        Color dblue = text.getDisplay().getSystemColor(SWT.COLOR_DARK_BLUE);
+        Color dcyan = text.getDisplay().getSystemColor(SWT.COLOR_DARK_CYAN);
+        Color dyellow = text.getDisplay().getSystemColor(SWT.COLOR_DARK_YELLOW);
+        Color dgray = text.getDisplay().getSystemColor(SWT.COLOR_DARK_GRAY);
 
         java.util.List<StyleRange> sr = new ArrayList<StyleRange>();
 
@@ -76,16 +106,20 @@ public class ProfileText {
         if (xperf.p.gxid != 0) {
             sb.append("► gxid    = ");
             slen = sb.length();
-            sb.append(Hexa32.toString32(xperf.p.gxid)).append("\n");
+            sb.append(Hexa32.toString32(xperf.p.gxid));
             sr.add(underlineStyle(slen, sb.length() - slen, dmagenta, SWT.NORMAL, SWT.UNDERLINE_LINK));
+            slen = sb.length();
+            sb.append(" <<- click to open XLog flow map").append("\n");
+            sr.add(style(slen, sb.length() - slen, dyellow, SWT.NORMAL));
         }
         if (xperf.p.caller != 0) {
-            sb.append("► caller    = ");
+            sb.append("► caller  = ");
             slen = sb.length();
             sb.append(Hexa32.toString32(xperf.p.caller)).append("\n");
             sr.add(underlineStyle(slen, sb.length() - slen, dmagenta, SWT.NORMAL, SWT.UNDERLINE_LINK));
         }
         sb.append("► objName = ").append(xperf.objName).append("\n");
+        sb.append("► thread  = ").append(TextProxy.hashMessage.getLoadText(date, xperf.p.threadNameHash, serverId)).append("\n");
         sb.append("► endtime = ").append(FormatUtil.print(new Date(xperf.p.endTime), "yyyyMMdd HH:mm:ss.SSS")).append("\n");
         sb.append("► elapsed = ").append(FormatUtil.print(xperf.p.elapsed, "#,##0")).append(" ms\n");
         sb.append("► service = ").append(TextProxy.service.getText(xperf.p.service)).append("\n");
@@ -143,6 +177,12 @@ public class ProfileText {
         t = TextProxy.desc.getLoadText(date, xperf.p.desc, serverId);
         if (StringUtil.isNotEmpty(t)) {
             sb.append("\n► desc=" + t);
+        }
+        if (StringUtil.isNotEmpty(xperf.p.text1)) {
+            sb.append("\n► text1=" + xperf.p.text1);
+        }
+        if (StringUtil.isNotEmpty(xperf.p.text2)) {
+            sb.append("\n► text2=" + xperf.p.text2);
         }
         if (xperf.p.hasDump == 1) {
             sb.append("\n► dump=Y");
@@ -261,8 +301,27 @@ public class ProfileText {
             }
 
             StepSingle stepSingle = (StepSingle) profiles[i];
+
+            if (stepSingle.getStepType() == StepEnum.THREAD_CALL_POSSIBLE) {
+                ThreadCallPossibleStep threadStep = (ThreadCallPossibleStep)stepSingle;
+                XLogData threadStepXlog = null;
+                if(threadStep.txid != 0L) {
+                    threadStepXlog = XLogProxy.getXLogData(xperf.serverId, DateUtil.yyyymmdd(xperf.p.endTime), threadStep.txid);
+                }
+                if(threadStepXlog != null) {
+                    threadStep.threaded = 1;
+                    threadStep.elapsed = threadStepXlog.p.elapsed;
+                }
+
+                if(threadStep.threaded == 0) {
+                    continue;
+                }
+            }
+
             tm = stepSingle.start_time + stime;
             cpu = stepSingle.start_cpu;
+            boolean ignoreCpu = false;
+            if(cpu < 0) ignoreCpu = true;
 
             // sr.add(style(sb.length(), 6, blue, SWT.NORMAL));
             int p1 = sb.length();
@@ -273,9 +332,28 @@ public class ProfileText {
             sb.append(" ");
             sb.append(FormatUtil.print(new Date(tm), "HH:mm:ss.SSS"));
             sb.append("   ");
+
+            slen = sb.length();
             sb.append(String.format("%6s", FormatUtil.print(tm - prev_tm, "#,##0")));
+
+            int gapTime = CastUtil.cint(tm - prev_tm);
+            int elapsedRate = xperf.p.elapsed == 0 ? 0 : CastUtil.cint((gapTime / (double)xperf.p.elapsed)*100);
+
+
+            if (elapsedRate > 50) {
+                sr.add(style(slen, sb.length() - slen, dred, SWT.BOLD));
+            } else if (elapsedRate > 20) {
+                sr.add(style(slen, sb.length() - slen, dblue, SWT.BOLD));
+            } else if (elapsedRate > 10) {
+                sr.add(style(slen, sb.length() - slen, dgreen, SWT.BOLD));
+            }
+
             sb.append(" ");
-            sb.append(String.format("%6s", FormatUtil.print(XLogUtil.getCpuTime(stepSingle), "#,##0")));
+            if(ignoreCpu) {
+            	sb.append(String.format("%6s", FormatUtil.print(0, "#,##0")));
+            } else {
+            	sb.append(String.format("%6s", FormatUtil.print(XLogUtil.getCpuTime(stepSingle), "#,##0")));
+            }
             sb.append("  ");
             int lineHead = sb.length() - p1;
 
@@ -290,12 +368,27 @@ public class ProfileText {
                 space--;
             }
 
+            int dotPos;
             switch (stepSingle.getStepType()) {
                 case StepEnum.METHOD:
-                    toString(sb, (MethodStep) stepSingle);
+                    slen = sb.length();
+                    dotPos = toString(sb, (MethodStep) stepSingle, isSimplified);
+
+                    sr.add(style(slen, 1, dyellow, SWT.BOLD));
+                    if(isSimplified && dotPos > 0) {
+                        sr.add(style(slen+1, dotPos, dyellow, SWT.NORMAL));
+                        sr.add(style(slen+dotPos+1, 1, dyellow, SWT.BOLD));
+                        sr.add(style(slen+dotPos+2, sb.length() - (slen+dotPos+2), dyellow, SWT.NORMAL));
+                    } else {
+                        sr.add(style(slen+1, sb.length() - slen+1, dyellow, SWT.NORMAL));
+                    }
                     break;
                 case StepEnum.METHOD2:
-                    toString(sb, (MethodStep) stepSingle);
+                    slen = sb.length();
+                    dotPos = toString(sb, (MethodStep) stepSingle, isSimplified);
+                    sr.add(style(slen, 1, dyellow, SWT.BOLD));
+                    sr.add(style(slen+1, sb.length() - slen+1, dyellow, SWT.NORMAL));
+                    //sr.add(style(slen+dotPos, 1, dyellow, SWT.BOLD));
                     MethodStep2 m2 = (MethodStep2) stepSingle;
                     if (m2.error != 0) {
                         slen = sb.length();
@@ -326,12 +419,19 @@ public class ProfileText {
                     toString(sb, (HashedMessageStep) stepSingle);
                     sr.add(style(slen, sb.length() - slen, dgreen, SWT.NORMAL));
                     break;
+                case StepEnum.PARAMETERIZED_MESSAGE:
+                    slen = sb.length();
+                    ParameterizedMessageStep pmStep = (ParameterizedMessageStep) stepSingle;
+                    toString(sb, pmStep);
+                    sr.add(style(slen, sb.length() - slen, getColor(pmStep.getLevel()), SWT.NORMAL));
+                    break;
                 case StepEnum.DUMP:
                     slen = sb.length();
                     toString(sb, (DumpStep) stepSingle, lineHead);
-                    sr.add(style(slen, sb.length() - slen, dgreen, SWT.NORMAL));
+                    sr.add(style(slen, sb.length() - slen, dgray, SWT.NORMAL));
                     break;
                 case StepEnum.APICALL:
+                case StepEnum.APICALL2:
                     ApiCallStep apicall = (ApiCallStep) stepSingle;
                     slen = sb.length();
                     toString(sb, apicall);
@@ -341,6 +441,23 @@ public class ProfileText {
                         sb.append("\n").append(TextProxy.error.getText(apicall.error));
                         sr.add(style(slen, sb.length() - slen, red, SWT.NORMAL));
                     }
+                    break;
+                case StepEnum.DISPATCH:
+                    DispatchStep dispatchStep = (DispatchStep) stepSingle;
+                    slen = sb.length();
+                    toString(sb, dispatchStep);
+                    sr.add(underlineStyle(slen, sb.length() - slen, dmagenta, SWT.NORMAL, SWT.UNDERLINE_LINK));
+                    if (dispatchStep.error != 0) {
+                        slen = sb.length();
+                        sb.append("\n").append(TextProxy.error.getText(dispatchStep.error));
+                        sr.add(style(slen, sb.length() - slen, red, SWT.NORMAL));
+                    }
+                    break;
+                case StepEnum.THREAD_CALL_POSSIBLE:
+                    ThreadCallPossibleStep tcSteap = (ThreadCallPossibleStep) stepSingle;
+                    slen = sb.length();
+                    toString(sb, tcSteap);
+                    sr.add(underlineStyle(slen, sb.length() - slen, dmagenta, SWT.NORMAL, SWT.UNDERLINE_LINK));
                     break;
                 case StepEnum.THREAD_SUBMIT:
                     ThreadSubmitStep threadSubmit = (ThreadSubmitStep) stepSingle;
@@ -366,7 +483,9 @@ public class ProfileText {
                     break;
             }
             sb.append("\n");
-            prev_cpu = cpu;
+            if(!ignoreCpu) {
+            	prev_cpu = cpu;
+            }
             prev_tm = tm;
         }
 
@@ -492,6 +611,11 @@ public class ProfileText {
             }
 
             StepSingle stepSingle = (StepSingle) profiles[i];
+
+            if (stepSingle.getStepType() == StepEnum.THREAD_CALL_POSSIBLE) {
+                if(((ThreadCallPossibleStep)stepSingle).threaded == 0) continue;
+            }
+
             tm = stime + stepSingle.start_time;
             cpu = stepSingle.start_cpu;
 
@@ -528,10 +652,10 @@ public class ProfileText {
 
             switch (stepSingle.getStepType()) {
                 case StepEnum.METHOD:
-                    toString(sb, (MethodStep) stepSingle);
+                    toString(sb, (MethodStep) stepSingle, false);
                     break;
                 case StepEnum.METHOD2:
-                    toString(sb, (MethodStep) stepSingle);
+                    toString(sb, (MethodStep) stepSingle, false);
                     MethodStep2 m2 = (MethodStep2) stepSingle;
                     if (m2.error != 0) {
                         slen = sb.length();
@@ -562,12 +686,19 @@ public class ProfileText {
                     toString(sb, (HashedMessageStep) stepSingle);
                     sr.add(style(slen, sb.length() - slen, dgreen, SWT.NORMAL));
                     break;
+                case StepEnum.PARAMETERIZED_MESSAGE:
+                    slen = sb.length();
+                    ParameterizedMessageStep pmStep = (ParameterizedMessageStep) stepSingle;
+                    toString(sb, pmStep);
+                    sr.add(style(slen, sb.length() - slen, getColor(pmStep.getLevel()), SWT.NORMAL));
+                    break;
                 case StepEnum.DUMP:
                     slen = sb.length();
                     toString(sb, (DumpStep) stepSingle, lineHead);
                     sr.add(style(slen, sb.length() - slen, dgreen, SWT.NORMAL));
                     break;
                 case StepEnum.APICALL:
+                case StepEnum.APICALL2:
                     ApiCallStep apicall = (ApiCallStep) stepSingle;
                     slen = sb.length();
                     toString(sb, apicall);
@@ -577,6 +708,23 @@ public class ProfileText {
                         sb.append("\n").append(TextProxy.error.getText(apicall.error));
                         sr.add(style(slen, sb.length() - slen, red, SWT.NORMAL));
                     }
+                    break;
+                case StepEnum.DISPATCH:
+                    DispatchStep step = (DispatchStep) stepSingle;
+                    slen = sb.length();
+                    toString(sb, step);
+                    sr.add(underlineStyle(slen, sb.length() - slen, dmagenta, SWT.NORMAL, SWT.UNDERLINE_LINK));
+                    if (step.error != 0) {
+                        slen = sb.length();
+                        sb.append("\n").append(TextProxy.error.getText(step.error));
+                        sr.add(style(slen, sb.length() - slen, red, SWT.NORMAL));
+                    }
+                    break;
+                case StepEnum.THREAD_CALL_POSSIBLE:
+                    ThreadCallPossibleStep tcSteap = (ThreadCallPossibleStep) stepSingle;
+                    slen = sb.length();
+                    toString(sb, tcSteap);
+                    sr.add(underlineStyle(slen, sb.length() - slen, dmagenta, SWT.NORMAL, SWT.UNDERLINE_LINK));
                     break;
                 case StepEnum.THREAD_SUBMIT:
                     ThreadSubmitStep threadSubmit = (ThreadSubmitStep) stepSingle;
@@ -618,7 +766,37 @@ public class ProfileText {
             m = Hexa32.toString32(p.hash);
         sb.append("call: ").append(m).append(" ").append(FormatUtil.print(p.elapsed, "#,##0")).append(" ms");
         if (p.txid != 0) {
+            if(p instanceof ApiCallStep2) {
+                if(((ApiCallStep2)p).async == 1) {
+                    sb.append(" [async]");
+                }
+            }
+            if(p.address != null) {
+                sb.append(" [" + p.address + "]");
+            }
+        }
+        if (p.txid != 0) {
             sb.append(" <" + Hexa32.toString32(p.txid) + ">");
+        }
+    }
+
+    public static void toString(StringBuffer sb, DispatchStep step) {
+        String m = TextProxy.apicall.getText(step.hash);
+        if (m == null)
+            m = Hexa32.toString32(step.hash);
+        sb.append("call: ").append(m).append(" ").append(FormatUtil.print(step.elapsed, "#,##0")).append(" ms");
+        if (step.txid != 0) {
+            sb.append(" <" + Hexa32.toString32(step.txid) + ">");
+        }
+    }
+
+    public static void toString(StringBuffer sb, ThreadCallPossibleStep step) {
+        String m = TextProxy.apicall.getText(step.hash);
+        if (m == null)
+            m = Hexa32.toString32(step.hash);
+        sb.append("call:thread: ").append(m).append(" ").append(FormatUtil.print(step.elapsed, "#,##0")).append(" ms");
+        if (step.txid != 0) {
+            sb.append(" <" + Hexa32.toString32(step.txid) + ">");
         }
     }
 
@@ -626,7 +804,27 @@ public class ProfileText {
         String m = TextProxy.hashMessage.getText(p.hash);
         if (m == null)
             m = Hexa32.toString32(p.hash);
-        sb.append(m).append(" #").append(FormatUtil.print(p.value, "#,##0")).append(" ").append(FormatUtil.print(p.time, "#,##0")).append(" ms");
+
+        if(p.time != -1) {
+            sb.append(m).append(" #").append(FormatUtil.print(p.value, "#,##0")).append(" ").append(FormatUtil.print(p.time, "#,##0")).append(" ms");
+        } else {
+            sb.append(m);
+        }
+    }
+
+    public static void toString(StringBuffer sb, ParameterizedMessageStep pmStep) {
+        String messageFormat = TextProxy.hashMessage.getText(pmStep.getHash());
+        String message;
+        if (messageFormat == null) {
+            message = Hexa32.toString32(pmStep.getHash());
+        } else {
+            message = pmStep.buildMessasge(messageFormat);
+        }
+
+        if(pmStep.getElapsed() != -1) {
+            sb.append("[").append(FormatUtil.print(pmStep.getElapsed(), "#,##0")).append(" ms] ");
+        }
+        sb.append(message);
     }
 
     public static void toString(StringBuffer sb, DumpStep p, int lineHead) {
@@ -774,12 +972,37 @@ public class ProfileText {
         sb.append(p.message);
     }
 
-    public static void toString(StringBuffer sb, MethodStep p) {
+    /**
+     * @return class and method deliminator position ( Class.method -> return 5)
+     */
+    public static int toString(StringBuffer sb, MethodStep p, boolean isSimplified) {
         String m = TextProxy.method.getText(p.hash);
         if (m == null) {
             m = Hexa32.toString32(p.hash);
         }
-        sb.append(m).append(" ").append(FormatUtil.print(p.elapsed, "#,##0")).append(" ms");
+
+        if(isSimplified) {
+            String simple = simplifyMethod(m);
+            sb.append(simple).append(" [").append(FormatUtil.print(p.elapsed, "#,##0")).append("ms]").append(" -- ").append(m);
+            return simple.indexOf('#');
+        } else {
+            sb.append(m).append(" ").append(FormatUtil.print(p.elapsed, "#,##0")).append(" ms");
+            return m.indexOf('.');
+        }
+    }
+
+    public static String simplifyMethod(String method) {
+        String[] parts = StringUtil.split(method, '.');
+        if(parts.length >= 2) {
+            String methodName = parts[parts.length - 1];
+            int bracePos = methodName.indexOf('(');
+
+            if(bracePos <= 0) return method;
+
+            return parts[parts.length - 2] + "#" + methodName.substring(0, bracePos) + "()";
+        } else {
+            return method;
+        }
     }
 
     public static StyleRange style(int start, int length, Color c, int f) {
@@ -787,6 +1010,14 @@ public class ProfileText {
         t.start = start;
         t.length = length;
         t.foreground = c;
+        t.fontStyle = f;
+        return t;
+    }
+
+    public static StyleRange style(int start, int length, int f) {
+        StyleRange t = new StyleRange();
+        t.start = start;
+        t.length = length;
         t.fontStyle = f;
         return t;
     }

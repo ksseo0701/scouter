@@ -1,5 +1,5 @@
 # Document
-![Englsh](https://img.shields.io/badge/language-English-red.svg) [![Korean](https://img.shields.io/badge/language-Korean-blue.svg)](index_kr.md)
+![Englsh](https://img.shields.io/badge/language-English-orange.svg) [![Korean](https://img.shields.io/badge/language-Korean-blue.svg)](index_kr.md)
 
 ## Getting Started
 - [Quick Start Guide (Quick Installation and Demo)](./main/Quick-Start.md)
@@ -10,7 +10,7 @@
 - [Simulate DB Lock](./use-case/Simulate-DB-Lock.md) 
 - [How to use a client program](./client/How-To-Use-Client.md)  
 - [What’s special in SCOUTER?](./main/What-special-in-SCOUTER.md)
-- [Stand-alone Java Batch Agent](./main/Stand-alone-Java-Batch-Agent_kr.md)
+- [Stand-alone Java Batch Agent](./main/Stand-alone-Java-Batch-Agent.md)
 
 ## Install
 - [Installation](./main/Setup.md)

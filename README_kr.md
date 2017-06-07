@@ -1,6 +1,6 @@
 ﻿![scouter](./scouter.document/img/main/scouter-logo-w200.png)
 
-[![Englsh](https://img.shields.io/badge/language-English-red.svg)](README.md) ![Korean](https://img.shields.io/badge/language-Korean-blue.svg)
+[![Englsh](https://img.shields.io/badge/language-English-orange.svg)](README.md) ![Korean](https://img.shields.io/badge/language-Korean-blue.svg)
 
 ## 오픈소스 S/W 어플리케이션 성능 모니터링
 
@@ -29,8 +29,6 @@ SCOUTER는 오픈소스 APM 도구로서 Java, WAS에 대한 모니터링 모니
 
 ## 소개 동영상(클릭)
 [![Demo gif](https://j.gifs.com/yDqbAa.gif)](https://youtu.be/iuArTzsD7Ws)
-
-<iframe width="560" height="315" src="https://www.youtube.com/embed/iuArTzsD7Ws" frameborder="0" allowfullscreen></iframe>
 
 ## Documents
  - [Document Home](./scouter.document/index_kr.md)
@@ -72,7 +70,7 @@ SCOUTER는 오픈소스 APM 도구로서 Java, WAS에 대한 모니터링 모니
  - [Scouter APM 사용자 모임 - Facebook 그룹](https://www.facebook.com/groups/scouterapm/)
 
 ## Scouter에 기여하기
- - **Pull request**는 반드시 **dev branch**로 요청하여야 합니다.
+ - **Pull request**는 반드시 **develop branch**로 요청하여야 합니다.
  - 상세한 내용은 개발자 가이드를 참조하시기 바랍니다.
    - [Scouter 개발자 가이드](./scouter.document/tech/Developer-Guide_kr.md)
  - 최초 Pull-Request시 다음 [CLA](http://goo.gl/forms/xSmYs8qM9J)(Contributor License Agreement)에 서명하여 제출하여야 합니다.

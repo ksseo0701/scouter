@@ -1,10 +1,10 @@
 # Scouter Plugin Guide
-[![Englsh](https://img.shields.io/badge/language-English-red.svg)](JavaAgent-Plugin-Scripting.md) ![Korean](https://img.shields.io/badge/language-Korean-blue.svg)
+[![Englsh](https://img.shields.io/badge/language-English-orange.svg)](JavaAgent-Plugin-Scripting.md) ![Korean](https://img.shields.io/badge/language-Korean-blue.svg)
 
 ## Javaagent Plugin
- - Default File Location : ${WAS_START_SCRIPT_DIR}/plugin
- - Dynamic application
- - By java code
+ - Default File Location : ${directory of scouter.agent.jar}/plugin 
+ - 또는 설정 가능 -> plugin_dir=/aaa/bbb/ccc/plugin
+ - plugin 파일에 java 코드 기록시 런타임에 동적으로 코드를 컴파일하여 로딩, 바로 적용됨
  - Plugin 종류
    - Http-service
    - Service
